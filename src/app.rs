@@ -138,8 +138,12 @@ impl eframe::App for TemplateApp {
                     });
                 })
                 .body(|mut body| {
-                    for patch in patches.expect("works") {
-                        body.row(30.0, |mut row| {
+                    for patch in patches
+                        .expect("works")
+                        .iter()
+                        .filter(|p| p.name.to_lowercase().contains(&self.label.to_lowercase()))
+                    {
+                        body.row(25.0, |mut row| {
                             row.col(|ui| {
                                 ui.button(format!("{}", patch.name));
                             });
