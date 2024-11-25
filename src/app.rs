@@ -1,42 +1,12 @@
+use bopler::extract_data_from_file;
+use bopler::Patch;
+use regex::Regex;
 use std::{
     error::Error,
     fs::File,
     io::{BufRead, BufReader},
 };
 
-use regex::Regex;
-
-#[derive(Debug)]
-pub struct Patch {
-    pc: u8,
-    msb: u8,
-    lsb: u8,
-    name: String,
-    category: String,
-}
-
-pub fn extract_data_from_file(file_path: &str) -> Result<Vec<Patch>, Box<dyn Error>> {
-    let file = File::open(file_path)?;
-    let reader = BufReader::new(file);
-    let pattern = r"(\d+)\t(\d+)\t(\d+)\t(.+?)\t(.+)";
-    let re = Regex::new(pattern)?;
-    let mut results = Vec::new();
-
-    for line in reader.lines() {
-        let line = line?;
-        for (_, [pc, msb, lsb, name, category]) in re.captures_iter(&line).map(|c| c.extract()) {
-            results.push(Patch {
-                pc: pc.parse()?,
-                msb: msb.parse()?,
-                lsb: lsb.parse()?,
-                name: name.to_string(),
-                category: category.to_string(),
-            });
-        }
-    }
-
-    Ok(results)
-}
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -146,7 +116,12 @@ impl eframe::App for TemplateApp {
                     }) {
                         body.row(25.0, |mut row| {
                             row.col(|ui| {
-                                ui.button(format!("{}", patch.name));
+                                let click_but = format!("{}", patch.name);
+                                let cb = ui.button(&click_but);
+                                if cb.clicked() {
+                                    bopler::set_patch(p, bopler::mpe::FULL_RANGE, conn_out);
+                                    println!("heeeeeeeeeeeeee");
+                                }
                             });
                             row.col(|ui| {
                                 ui.label(format!("{}", patch.category));
