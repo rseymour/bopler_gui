@@ -1,13 +1,5 @@
 use bopler::extract_data_from_file;
-use bopler::Patch;
-use midir::MidiOutputConnection;
 use midir::{MidiOutput, MidiOutputPort};
-use regex::Regex;
-use std::{
-    error::Error,
-    fs::File,
-    io::{BufRead, BufReader},
-};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -31,7 +23,7 @@ impl Default for TemplateApp {
 
         Self {
             // Example stuff:
-            label: "Hello World!".to_owned(),
+            label: "".to_owned(),
             value: 2.7,
             midi_out,
             output_port: None,
@@ -112,7 +104,7 @@ impl eframe::App for TemplateApp {
                 };
             }
             ui.horizontal(|ui| {
-                ui.label("Write something: ");
+                ui.label("Search patches: ");
                 ui.text_edit_singleline(&mut self.label);
             });
 
@@ -154,13 +146,13 @@ impl eframe::App for TemplateApp {
                                 let midi_out =
                                     MidiOutput::new("My MIDI Output").expect("midi works");
                                 if cb.clicked() {
-                                    bopler::set_patch(
+                                    let _ = bopler::set_patch(
                                         patch,
                                         bopler::mpe::FULL_RANGE,
                                         midi_out
                                             .connect(&self.output_port.clone().unwrap(), "bopler")
                                             .as_mut()
-                                            .unwrap(),
+                                            .expect("port exists"),
                                     );
                                 }
                             });
