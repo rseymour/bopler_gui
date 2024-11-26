@@ -1,5 +1,7 @@
 use bopler::extract_data_from_file;
 use bopler::Patch;
+use midir::MidiOutputConnection;
+use midir::{MidiOutput, MidiOutputPort};
 use regex::Regex;
 use std::{
     error::Error,
@@ -16,14 +18,23 @@ pub struct TemplateApp {
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    midi_out: MidiOutput,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    output_port: Option<MidiOutputPort>,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
+        // Create a new MIDI output connection
+        let midi_out = MidiOutput::new("My MIDI Output").expect("midi works");
+
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
+            midi_out,
+            output_port: None,
         }
     }
 }
@@ -78,6 +89,28 @@ impl eframe::App for TemplateApp {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("eframe template");
 
+            // Get available ports
+            let out_ports = self.midi_out.ports();
+
+            // No ports available?
+            if out_ports.is_empty() {
+                println!("No MIDI output ports available!");
+            }
+
+            // List available ports
+            for (i, p) in out_ports.iter().enumerate() {
+                if ui
+                    .button(format!(
+                        "{}: {}",
+                        i,
+                        &self.midi_out.port_name(p).expect("port has name")
+                    ))
+                    .clicked()
+                {
+                    println!("\nOpening connection");
+                    self.output_port = Some(p.clone());
+                };
+            }
             ui.horizontal(|ui| {
                 ui.label("Write something: ");
                 ui.text_edit_singleline(&mut self.label);
@@ -118,9 +151,17 @@ impl eframe::App for TemplateApp {
                             row.col(|ui| {
                                 let click_but = format!("{}", patch.name);
                                 let cb = ui.button(&click_but);
+                                let midi_out =
+                                    MidiOutput::new("My MIDI Output").expect("midi works");
                                 if cb.clicked() {
-                                    bopler::set_patch(p, bopler::mpe::FULL_RANGE, conn_out);
-                                    println!("heeeeeeeeeeeeee");
+                                    bopler::set_patch(
+                                        patch,
+                                        bopler::mpe::FULL_RANGE,
+                                        midi_out
+                                            .connect(&self.output_port.clone().unwrap(), "bopler")
+                                            .as_mut()
+                                            .unwrap(),
+                                    );
                                 }
                             });
                             row.col(|ui| {
