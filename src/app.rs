@@ -1,4 +1,4 @@
-use bopler::extract_data_from_file;
+use bopler::{extract_data_from_string, Patch};
 use midir::{MidiOutput, MidiOutputPort};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -8,8 +8,6 @@ pub struct TemplateApp {
     // Example stuff:
     label: String,
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
     #[serde(skip)] // This how you opt-out of serialization of a field
     midi_out: MidiOutput,
     #[serde(skip)] // This how you opt-out of serialization of a field
@@ -24,7 +22,6 @@ impl Default for TemplateApp {
         Self {
             // Example stuff:
             label: "".to_owned(),
-            value: 2.7,
             midi_out,
             output_port: None,
         }
@@ -79,7 +76,7 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
+            ui.heading("Bopler JV-1010 MPE control");
 
             // Get available ports
             let out_ports = self.midi_out.ports();
@@ -108,20 +105,16 @@ impl eframe::App for TemplateApp {
                 ui.text_edit_singleline(&mut self.label);
             });
 
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
             ui.separator();
 
-            let patches = extract_data_from_file("all_patches.tsv");
+            let patch_string = std::include_str!("../all_patches.tsv");
+            let patches = extract_data_from_string(&patch_string);
             use egui_extras::{Column, TableBuilder};
             TableBuilder::new(ui)
-                .column(Column::auto().resizable(true))
-                .column(Column::auto().resizable(true))
+                .column(Column::auto_with_initial_suggestion(120.0).resizable(true))
+                .column(Column::auto_with_initial_suggestion(160.0).resizable(true))
                 .column(Column::remainder())
-                .header(20.0, |mut header| {
+                .header(30.0, |mut header| {
                     header.col(|ui| {
                         ui.heading("Patch Name");
                     });
