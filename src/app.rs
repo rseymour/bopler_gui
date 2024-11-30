@@ -12,6 +12,10 @@ pub struct TemplateApp {
     midi_out: MidiOutput,
     #[serde(skip)] // This how you opt-out of serialization of a field
     output_port: Option<MidiOutputPort>,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    history: Vec<Patch>,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    current: Option<Patch>,
 }
 
 impl Default for TemplateApp {
@@ -24,6 +28,8 @@ impl Default for TemplateApp {
             label: "".to_owned(),
             midi_out,
             output_port: None,
+            history: Vec::new(),
+            current: None,
         }
     }
 }
@@ -69,6 +75,34 @@ impl eframe::App for TemplateApp {
                     });
                     ui.add_space(16.0);
                 }
+                ui.menu_button("History", |ui| {
+                    for patch in self.history.iter() {
+                        if ui.button(format!("{}", patch.name)).clicked() {
+                            let midi_out = MidiOutput::new("My MIDI Output").expect("midi works");
+                            let _ = bopler::set_patch(
+                                patch,
+                                bopler::mpe::FULL_RANGE,
+                                midi_out
+                                    .connect(&self.output_port.clone().unwrap(), "bopler")
+                                    .as_mut()
+                                    .expect("port exists"),
+                            );
+                            self.current = Some(patch.clone());
+                        }
+                    }
+                });
+                ui.add_space(16.0);
+                if self.current.is_some() {
+                    ui.menu_button(
+                        format!("Current: {}", self.current.as_ref().unwrap().name),
+                        |ui| {
+                            if ui.button("Save").clicked() {
+                                self.history.push(self.current.clone().unwrap());
+                            }
+                        },
+                    );
+                }
+                ui.add_space(16.0);
 
                 egui::widgets::global_theme_preference_buttons(ui);
             });
@@ -96,7 +130,6 @@ impl eframe::App for TemplateApp {
                     ))
                     .clicked()
                 {
-                    println!("\nOpening connection");
                     self.output_port = Some(p.clone());
                 };
             }
@@ -132,10 +165,11 @@ impl eframe::App for TemplateApp {
                             .contains(&self.label.to_lowercase())
                             || p.name.to_lowercase().contains(&self.label.to_lowercase())
                     }) {
+                        let is_enabled = &self.output_port.is_some();
                         body.row(25.0, |mut row| {
                             row.col(|ui| {
                                 let click_but = format!("{}", patch.name);
-                                let cb = ui.button(&click_but);
+                                let cb = ui.add_enabled(*is_enabled, egui::Button::new(&click_but));
                                 let midi_out =
                                     MidiOutput::new("My MIDI Output").expect("midi works");
                                 if cb.clicked() {
@@ -147,6 +181,8 @@ impl eframe::App for TemplateApp {
                                             .as_mut()
                                             .expect("port exists"),
                                     );
+                                    self.history.push(patch.clone());
+                                    self.current = Some(patch.clone());
                                 }
                             });
                             row.col(|ui| {
