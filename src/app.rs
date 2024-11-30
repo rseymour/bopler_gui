@@ -1,4 +1,10 @@
 use bopler::{extract_data_from_string, Patch};
+use egui::FontFamily::Proportional;
+use egui::FontId;
+use egui::TextStyle::Body;
+use egui::TextStyle::Button;
+use egui::TextStyle::Heading;
+use egui::TextStyle::Small;
 use midir::{MidiOutput, MidiOutputPort};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -39,6 +45,16 @@ impl TemplateApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
+
+        let mut style = (*cc.egui_ctx.style()).clone();
+        style.text_styles = [
+            (Heading, FontId::new(25.0, Proportional)),
+            (Body, FontId::new(18.0, Proportional)),
+            (Button, FontId::new(16.0, Proportional)),
+            (Small, FontId::new(10.0, Proportional)),
+        ]
+        .into();
+        cc.egui_ctx.set_style(style);
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
@@ -110,7 +126,7 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Bopler JV-1010 MPE control");
+            ui.heading("JV-1010 MPE control");
 
             // Get available ports
             let out_ports = self.midi_out.ports();
@@ -144,8 +160,8 @@ impl eframe::App for TemplateApp {
             let patches = extract_data_from_string(&patch_string);
             use egui_extras::{Column, TableBuilder};
             TableBuilder::new(ui)
-                .column(Column::auto_with_initial_suggestion(120.0).resizable(true))
                 .column(Column::auto_with_initial_suggestion(160.0).resizable(true))
+                .column(Column::auto_with_initial_suggestion(190.0).resizable(true))
                 .column(Column::remainder())
                 .header(30.0, |mut header| {
                     header.col(|ui| {
